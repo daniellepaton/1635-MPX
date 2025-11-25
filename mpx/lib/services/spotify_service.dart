@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -88,10 +89,17 @@ class SpotifyService {
       '$authUrl?client_id=$clientId&response_type=code&redirect_uri=${Uri.encodeComponent(redirectUri)}&scope=${Uri.encodeComponent(scopes)}'
     );
     
-    if (await canLaunchUrl(authUri)) {
-      await launchUrl(authUri, mode: LaunchMode.externalApplication);
+    // On web, use platformDefault to open in same window/tab
+    // On mobile, use externalApplication to open in browser
+    if (kIsWeb) {
+      // For web, open in the same window
+      await launchUrl(authUri, mode: LaunchMode.platformDefault);
     } else {
-      throw Exception('Could not open Spotify authentication URL');
+      if (await canLaunchUrl(authUri)) {
+        await launchUrl(authUri, mode: LaunchMode.externalApplication);
+      } else {
+        throw Exception('Could not open Spotify authentication URL');
+      }
     }
   }
 
@@ -842,27 +850,42 @@ class SpotifyService {
     double? targetEnergy,
     double? targetTempo,
   }) async {
-
     final token = await getAccessToken();
+    if (token == null) {
+      throw Exception('Not authenticated with Spotify. Please login first.');
+    }
 
-    final uri = Uri.https(
-      'api.spotify.com',
-      '/v1/recommendations',
-      {
-        "seed_genres": seedGenres.join(','),
-        if (targetValence != null) "target_valence": targetValence.toString(),
-        if (targetEnergy != null) "target_energy": targetEnergy.toString(),
-        if (targetTempo != null) "target_tempo": targetTempo.toString(),
-      },
-    );
+    try {
+      final uri = Uri.https(
+        'api.spotify.com',
+        '/v1/recommendations',
+        {
+          "seed_genres": seedGenres.join(','),
+          if (targetValence != null) "target_valence": targetValence.toString(),
+          if (targetEnergy != null) "target_energy": targetEnergy.toString(),
+          if (targetTempo != null) "target_tempo": targetTempo.toString(),
+          "limit": "20",
+        },
+      );
 
-    final response = await http.get(
-      uri,
-      headers: {"Authorization": "Bearer $token"},
-    );
+      final response = await http.get(
+        uri,
+        headers: {"Authorization": "Bearer $token"},
+      );
 
-    final data = jsonDecode(response.body);
-    return data['tracks'] ?? [];
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['tracks'] ?? [];
+      } else if (response.statusCode == 401) {
+        throw Exception('Authentication expired. Please login again.');
+      } else {
+        print('Recommendations API error: ${response.statusCode} - ${response.body}');
+        throw Exception('Failed to get recommendations: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error in getRecommendations: $e');
+      rethrow;
+    }
   }
 
   Map<String, dynamic> formatTrack(Map<String, dynamic> track) {
