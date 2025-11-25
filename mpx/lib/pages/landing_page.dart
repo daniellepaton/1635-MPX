@@ -59,35 +59,71 @@ class _LandingPageState extends State<LandingPage> {
   Future<void> _loadAllData() async {
     if (!mounted) return;
 
+    // Check if authenticated first
+    final token = await _spotifyService.getAccessToken();
+    if (token == null) {
+      print('No access token - user not authenticated');
+      if (mounted) {
+        setState(() {
+          _isLoadingData = false;
+        });
+      }
+      return;
+    }
+
     setState(() {
       _isLoadingData = true;
     });
 
     try {
-      // Load all data in parallel
+      // Load all data in parallel with error handling for each
       final results = await Future.wait([
-        _spotifyService.getDetailedEmotionalForecast(),
-        RecommendationService().getRecommendationsForMood("mellow"),
-        _spotifyService.getUserPlaylists(limit: 10),
+        _spotifyService.getDetailedEmotionalForecast().catchError((e) {
+          print('Error loading emotional forecast: $e');
+          return {
+            'overall_mood': 'MELLOW',
+            'current_mood': 'MELLOW',
+            'morning_mood': 'MELLOW',
+            'weekly_forecast': [],
+            'total_tracks_analyzed': 0,
+          };
+        }),
+        RecommendationService().getRecommendationsForMood("mellow").catchError((e) {
+          print('Error loading recommendations: $e');
+          return <Map<String, dynamic>>[];
+        }),
+        _spotifyService.getUserPlaylists(limit: 10).catchError((e) {
+          print('Error loading playlists: $e');
+          return <Map<String, dynamic>>[];
+        }),
       ]);
-
 
       if (mounted) {
         setState(() {
           _emotionalForecast = results[0] as Map<String, dynamic>;
           _songRecommendations = results[1] as List<Map<String, dynamic>>;
           _playlists = results[2] as List<Map<String, dynamic>>;
+          _isLoadingData = false; // Set loading to false on success
         });
       }
     } catch (e) {
       print('Error loading data: $e');
       if (mounted) {
         setState(() {
+          // Set default values on error
+          _emotionalForecast = {
+            'overall_mood': 'MELLOW',
+            'current_mood': 'MELLOW',
+            'morning_mood': 'MELLOW',
+            'weekly_forecast': [],
+            'total_tracks_analyzed': 0,
+          };
+          _songRecommendations = [];
+          _playlists = [];
           _isLoadingData = false;
         });
       }
     }
-    print("TOKEN: ${await _spotifyService.getAccessToken()}");
 
   }
 
