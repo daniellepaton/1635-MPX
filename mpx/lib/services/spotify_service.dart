@@ -29,7 +29,8 @@ class SpotifyService {
   //
   // Example: If Flutter shows "http://localhost:54321", use "http://127.0.0.1:54321/callback"
   static const String redirectUri = 'http://127.0.0.1:8080/callback';
-  
+  // static const String redirectUri = 'https://music-vibe-718b5.web.app/callback'; //uncomment when you are ready to deploy to firebase
+
   // TODO: Update the port above to match your actual Flutter web port
   // TODO: Also update the same URI in your Spotify Dashboard
   
@@ -90,7 +91,6 @@ class SpotifyService {
     );
     
     // On web, use platformDefault to open in same window/tab
-    // On mobile, use externalApplication to open in browser
     if (kIsWeb) {
       // For web, open in the same window
       await launchUrl(authUri, mode: LaunchMode.platformDefault);
@@ -364,47 +364,40 @@ class SpotifyService {
 
   // Get recently played tracks
   // GET https://api.spotify.com/v1/me/player/recently-played
-  Future<List<Map<String, dynamic>>> getRecentlyPlayedTracks({int limit = 50}) async {
-    final token = await getAccessToken();
-    if (token == null) {
-      throw Exception('Not authenticated with Spotify. Please login first.');
-    }
+  Future<List<Map<String, dynamic>>> getRecentlyPlayedTracks({int limit = 10}) async {
+  final url = Uri.parse("https://api.spotify.com/v1/me/player/recently-played?limit=$limit");
+  final token = await getAccessToken();
 
-    try {
-      final response = await http.get(
-        Uri.parse('$apiBaseUrl/me/player/recently-played?limit=$limit'),
-        headers: {
-          'Authorization': 'Bearer $token',
-        },
-      );
+  final response = await http.get(
+    url,
+    headers: {"Authorization": "Bearer $token"},
+  );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final items = (data['items'] as List? ?? []);
-        return items.map((item) {
-          final track = item['track'] ?? {};
-          return {
-            'id': track['id'],
-            'name': track['name'],
-            'artist': track['artists'] != null && (track['artists'] as List).isNotEmpty
-                ? track['artists'][0]['name']
-                : 'Unknown',
-            'album': track['album']?['name'] ?? 'Unknown',
-            'played_at': item['played_at'],
-          };
-        }).toList();
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication expired. Please login again.');
-      } else {
-        throw Exception('Failed to get recently played tracks: ${response.statusCode}');
-      }
-    } catch (e) {
-      if (e is Exception) {
-        rethrow;
-      }
-      throw Exception('Error fetching recently played tracks: $e');
-    }
+  if (response.statusCode != 200) {
+    throw Exception("Failed to load recently played tracks");
   }
+
+  final data = json.decode(response.body);
+  final items = (data['items'] as List? ?? []);
+
+  return items.map((item) {
+    final track = item['track'] ?? {};
+    final album = track['album'] ?? {};
+    final images = album['images'] as List? ?? [];
+
+    return {
+      'id': track['id'],
+      'name': track['name'] ?? "Unknown",
+      'artist': (track['artists'] as List?)?.isNotEmpty == true
+          ? track['artists'][0]['name']
+          : "Unknown",
+      'album': album['name'] ?? "Unknown",
+      'external_url': track['external_urls']?['spotify'],
+      'image_url': images.isNotEmpty ? images[0]['url'] : null,
+      'played_at': item['played_at'],
+    };
+  }).toList();
+}
 
   // Get audio features for multiple tracks
   // GET https://api.spotify.com/v1/audio-features?ids=...
@@ -844,50 +837,6 @@ class SpotifyService {
     }
   }
 
-    Future<List<dynamic>> getRecommendations({
-    required List<String> seedGenres,
-    double? targetValence,
-    double? targetEnergy,
-    double? targetTempo,
-  }) async {
-    final token = await getAccessToken();
-    if (token == null) {
-      throw Exception('Not authenticated with Spotify. Please login first.');
-    }
-
-    try {
-      final uri = Uri.https(
-        'api.spotify.com',
-        '/v1/recommendations',
-        {
-          "seed_genres": seedGenres.join(','),
-          if (targetValence != null) "target_valence": targetValence.toString(),
-          if (targetEnergy != null) "target_energy": targetEnergy.toString(),
-          if (targetTempo != null) "target_tempo": targetTempo.toString(),
-          "limit": "20",
-        },
-      );
-
-      final response = await http.get(
-        uri,
-        headers: {"Authorization": "Bearer $token"},
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['tracks'] ?? [];
-      } else if (response.statusCode == 401) {
-        throw Exception('Authentication expired. Please login again.');
-      } else {
-        print('Recommendations API error: ${response.statusCode} - ${response.body}');
-        throw Exception('Failed to get recommendations: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('Error in getRecommendations: $e');
-      rethrow;
-    }
-  }
-
   Map<String, dynamic> formatTrack(Map<String, dynamic> track) {
     return {
       'name': track['name'] ?? 'Unknown',
@@ -895,7 +844,53 @@ class SpotifyService {
       'image_url': track['album']?['images']?[0]?['url'],
     };
   }
+// Get Recently Played Track IDs
+Future<List<String>> getRecentlyPlayedTrackIds() async {
+  final token = await getAccessToken();
+  if (token == null) return [];
 
+  final url = Uri.parse("https://api.spotify.com/v1/me/player/recently-played?limit=10");
+
+  final response = await http.get(
+    url,
+    headers: {"Authorization": "Bearer $token"},
+  );
+
+  if (response.statusCode != 200) return [];
+
+  final data = jsonDecode(response.body);
+  final items = data["items"] as List;
+
+  return items.map<String>((item) => item["track"]["id"] as String).toList();
+}
+// Get Recommendations from Spotify
+Future<List<Map<String, dynamic>>> getRecommendations({
+  required List<String> seedTracks,
+  required String mood,
+}) async {
+  final token = await getAccessToken();
+
+  if (token == null) return [];
+
+  final url = Uri.parse(
+      "https://api.spotify.com/v1/recommendations?seed_tracks=${seedTracks.take(3).join(",")}&limit=10");
+
+  final response = await http.get(url, headers: {"Authorization": "Bearer $token"});
+
+  if (response.statusCode != 200) return [];
+
+  final data = jsonDecode(response.body);
+  final tracks = data["tracks"] as List;
+
+  return tracks.map<Map<String, dynamic>>((t) {
+    return {
+      "name": t["name"],
+      "artist": t["artists"][0]["name"],
+      "image": t["album"]["images"][0]["url"],
+      "url": t["external_urls"]["spotify"],
+    };
+  }).toList();
+}
 
 }
 

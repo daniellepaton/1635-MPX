@@ -10,6 +10,10 @@ class AuthService {
     return token != null;
   }
 
+  Future<void> processSpotifyCode(String code) async {
+    await SpotifyService().exchangeCodeForToken(code);
+  }
+
   // Get user info
   Future<Map<String, dynamic>?> getUserInfo() async {
     final token = await _spotifyService.getAccessToken();
