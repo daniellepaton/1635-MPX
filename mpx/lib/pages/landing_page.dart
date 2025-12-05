@@ -76,20 +76,30 @@ class _LandingPageState extends State<LandingPage> {
     });
 
     try {
+      // First load the emotional forecast to get the actual mood
+      final forecast = await _spotifyService.getDetailedEmotionalForecast().catchError((e) {
+        print('Error loading emotional forecast: $e');
+        print('Stack trace: ${StackTrace.current}');
+        return {
+          'overall_mood': 'UNREADABLE',
+          'current_mood': 'UNREADABLE',
+          'morning_mood': 'UNREADABLE',
+          'weekly_forecast': [],
+          'total_tracks_analyzed': 0,
+        };
+      });
+      
+      print('Forecast loaded: ${forecast['total_tracks_analyzed']} tracks analyzed');
+
+      // Extract the mood from forecast (use overall_mood or current_mood)
+      final forecastMood = (forecast['overall_mood'] as String? ?? forecast['current_mood'] as String? ?? 'UNREADABLE').toLowerCase();
+      print('Determined mood from forecast: $forecastMood');
+
       // Load all data in parallel with error handling for each
       final results = await Future.wait([
-        _spotifyService.getDetailedEmotionalForecast().catchError((e) {
-          print('Error loading emotional forecast: $e');
-          return {
-            'overall_mood': 'MELLOW',
-            'current_mood': 'MELLOW',
-            'morning_mood': 'MELLOW',
-            'weekly_forecast': [],
-            'total_tracks_analyzed': 0,
-          };
-        }),
-        RecommendationService().getRecommendationsForMood("mellow").catchError((e) {
-          print('Error loading recommendations: $e');
+        Future.value(forecast), // Already loaded
+        RecommendationService().getRecommendationsForMood(forecastMood).catchError((e) {
+          print('Error loading recommendations for mood $forecastMood: $e');
           return <Map<String, dynamic>>[];
         }),
         _spotifyService.getUserPlaylists(limit: 10).catchError((e) {
@@ -112,9 +122,9 @@ class _LandingPageState extends State<LandingPage> {
         setState(() {
           // Set default values on error
           _emotionalForecast = {
-            'overall_mood': 'MELLOW',
-            'current_mood': 'MELLOW',
-            'morning_mood': 'MELLOW',
+            'overall_mood': 'UNREADABLE',
+            'current_mood': 'UNREADABLE',
+            'morning_mood': 'UNREADABLE',
             'weekly_forecast': [],
             'total_tracks_analyzed': 0,
           };
@@ -129,9 +139,13 @@ class _LandingPageState extends State<LandingPage> {
 
   Future<void> _loadMoodBasedRecommendations() async {
     final recService = RecommendationService();
-    final mood = "mellow"; // later connect to emotional forecast
+    // Use actual forecast mood instead of hardcoded value
+    final mood = _emotionalForecast?['overall_mood'] as String? ?? 
+                 _emotionalForecast?['current_mood'] as String? ?? 
+                 'mellow';
+    final moodLower = mood.toLowerCase();
 
-    final rawTracks = await recService.getRecommendationsForMood(mood);
+    final rawTracks = await recService.getRecommendationsForMood(moodLower);
 
     // Transform raw Spotify tracks into your UI-friendly format
     final formatted = rawTracks.map<Map<String, dynamic>>((track) {
@@ -156,8 +170,10 @@ class _LandingPageState extends State<LandingPage> {
       case 'SAD':
         return MoodIcon.sad;
       case 'MELLOW':
-      default:
         return MoodIcon.mellow;
+      case 'UNREADABLE':
+      default:
+        return MoodIcon.sad; // Use sad icon for unreadable as placeholder
     }
   }
 
@@ -384,7 +400,7 @@ class _LandingPageState extends State<LandingPage> {
       );
     }
 
-    final overallMood = _emotionalForecast!['overall_mood'] as String? ?? 'MELLOW';
+    final overallMood = _emotionalForecast!['overall_mood'] as String? ?? 'UNREADABLE';
     final weeklyForecast = _emotionalForecast!['weekly_forecast'] as List? ?? [];
     final totalTracks = _emotionalForecast!['total_tracks_analyzed'] as int? ?? 0;
 
@@ -438,7 +454,7 @@ class _LandingPageState extends State<LandingPage> {
             const SizedBox(height: 16),
             ...weeklyForecast.map((dayData) {
               final day = dayData['day'] as String? ?? '';
-              final mood = dayData['mood'] as String? ?? 'MELLOW';
+              final mood = dayData['mood'] as String? ?? 'UNREADABLE';
               return Padding(
                 padding: const EdgeInsets.only(bottom: 16),
                 child: Row(
