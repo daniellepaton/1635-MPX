@@ -253,43 +253,61 @@ late final Animation<Offset> _iconSlide;
           return InkWell(
             onTap: () async {
               final url = t['external_url'];
-              if (url != null) {
-                final uri = Uri.parse(url);
-                if (await canLaunchUrl(uri)) {
-                  await launchUrl(uri,
-                      mode: LaunchMode.externalApplication);
-                }
+
+              if (url == null || url.toString().isEmpty) {
+                debugPrint("No Spotify URL available for this track.");
+                return;
+              }
+
+              final uri = Uri.parse(url.toString());
+
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(
+                  uri,
+                  mode: LaunchMode.externalApplication,
+                );
+              } else {
+                debugPrint("Could not launch Spotify URL: $url");
               }
             },
-            child: Row(children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(4),
-                child: Image.network(
-                  t['image_url'] ?? "",
-                  width: 48,
-                  height: 48,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 48,
-                    height: 48,
-                    color: Colors.grey[300],
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(4),
+                  child: t['image_url'] != null &&
+                          t['image_url'].toString().isNotEmpty
+                      ? Image.network(
+                          t['image_url'],
+                          width: 48,
+                          height: 48,
+                          fit: BoxFit.cover,
+                        )
+                      : Container(
+                          width: 48,
+                          height: 48,
+                          color: Colors.grey[300],
+                          alignment: Alignment.center,
+                          child: const Icon(Icons.music_note),
+                        ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        t['name'] ?? loc.unknown,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        t['artist'] ?? loc.unknown,
+                        style: const TextStyle(color: Colors.black54),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(t['name'] ?? loc.unknown,
-                        style:
-                            const TextStyle(fontWeight: FontWeight.bold)),
-                    Text(t['artist'] ?? loc.unknown,
-                        style: const TextStyle(color: Colors.black54)),
-                  ],
-                ),
-              ),
-            ]),
+              ],
+            ),
           );
         },
       ),

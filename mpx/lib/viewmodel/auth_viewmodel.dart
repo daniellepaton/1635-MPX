@@ -37,7 +37,7 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Optional: fetch the user's Spotify profile
+  /// fetch the user's Spotify profile
   Future<Map<String, dynamic>?> getUserInfo() async {
     return await _auth.getUserInfo();
   }

@@ -403,22 +403,29 @@ final items = (data['items'] as List? ?? []);
           return await _getTopTracksFallback(limit: limit);
         }
         
-return items.map((item) {
-final track = item['track'] ?? {};
-          final artists = track['artists'] as List? ?? [];
-return {
-'id': track['id'],
-'name': track['name'],
-            'artist': artists.isNotEmpty
-                ? artists[0]['name']
-: 'Unknown',
-            'artist_id': artists.isNotEmpty
-                ? artists[0]['id']
-                : null,
-'album': track['album']?['name'] ?? 'Unknown',
-'played_at': item['played_at'],
-};
-}).toList();
+  return items.map((item) {
+    final track = item['track'] ?? {};
+    final artists = track['artists'] as List? ?? [];
+    final album = track['album'] as Map<String, dynamic>?;
+    final images = album?['images'] as List? ?? [];
+
+    return {
+      'id': track['id'],
+      'name': track['name'],
+      'artist': artists.isNotEmpty ? artists[0]['name'] : 'Unknown',
+      'artist_id': artists.isNotEmpty ? artists[0]['id'] : null,
+
+      'image_url': images.isNotEmpty
+          ? images[0]['url']?.toString().replaceFirst('http://', 'https://')
+          : null,
+
+      'external_url': track['external_urls']?['spotify'],
+
+      'album': album?['name'] ?? 'Unknown',
+      'played_at': item['played_at'],
+    };
+  }).toList();
+
 } else if (response.statusCode == 401) {
         print('Authentication expired for recently played tracks');
 throw Exception('Authentication expired. Please login again.');
@@ -1022,11 +1029,13 @@ return {
 : 'Unknown',
 'album': track['album']?['name'] ?? 'Unknown',
 'preview_url': track['preview_url'],
-'external_url': track['external_urls']?['spotify'],
-'image_url': track['album']?['images'] != null && 
-(track['album']?['images'] as List).isNotEmpty
-? (track['album']?['images'] as List)[0]['url']
-: null,
+'external_url': track['external_urls']['spotify'],
+'image_url': track['album']?['images'] != null &&
+        (track['album']?['images'] as List).isNotEmpty
+    ? (track['album']?['images'] as List)[0]['url']
+        .toString()
+        .replaceFirst('http://', 'https://')
+    : null,
 };
 }).toList();
 } else if (response.statusCode == 401) {
