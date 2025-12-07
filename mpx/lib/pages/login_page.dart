@@ -6,9 +6,7 @@ import '../services/spotify_service.dart';
 import '../l10n/app_localizations.dart';
 
 class LoginPage extends StatefulWidget {
-  // final VoidCallback onToggleLanguage;
   const LoginPage({super.key, this.onToggleLanguage});
-
   final VoidCallback? onToggleLanguage;
 
   @override
@@ -20,7 +18,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   bool _showManualEntry = false;
   String? _errorMessage;
-
 
   @override
   void initState() {
@@ -40,9 +37,7 @@ class _LoginPageState extends State<LoginPage> {
     if (code == null || code.isEmpty) return;
 
     html.window.localStorage.remove('spotify_auth_code');
-
     final authVM = context.read<AuthViewModel>();
-
     setState(() => _isLoading = true);
 
     try {
@@ -73,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  /// Manual entry fallback ONLY (does not interfere with normal flow)
+  /// Manual entry fallback ONLY (shouldn't interfere with normal flow)
   Future<void> _submitManualCode() async {
     final authVM = context.read<AuthViewModel>();
     final code = _codeController.text.trim();
@@ -94,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  /// Check if the user is already authenticated (using stored refresh token)
+  /// Check if the user is already authenticated (using the stored refresh token)
   Future<void> _checkStatus() async {
     final authVM = context.read<AuthViewModel>();
 
@@ -113,9 +108,7 @@ class _LoginPageState extends State<LoginPage> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  // --------------------------------------------------
-  //                       UI
-  // --------------------------------------------------
+  // ---------------------- UI ---------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +160,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 48),
 
-                // STEP 1: Sign in with Spotify
+                // Sign in with Spotify
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -228,7 +221,10 @@ class _LoginPageState extends State<LoginPage> {
                           child: Text(
                             _errorMessage!,
                             textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.red, fontSize: 13),
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontSize: 13,
+                            ),
                           ),
                         ),
                       SizedBox(
@@ -244,7 +240,9 @@ class _LoginPageState extends State<LoginPage> {
                           child: _isLoading
                               ? const CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation(Colors.white),
+                                  valueColor: AlwaysStoppedAnimation(
+                                    Colors.white,
+                                  ),
                                 )
                               : Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -252,7 +250,9 @@ class _LoginPageState extends State<LoginPage> {
                                     Icon(Icons.music_note, size: 20),
                                     const SizedBox(width: 12),
                                     Text(
-                                      AppLocalizations.of(context)!.continueWithSpotify,
+                                      AppLocalizations.of(
+                                        context,
+                                      )!.continueWithSpotify,
                                       style: const TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
@@ -269,7 +269,7 @@ class _LoginPageState extends State<LoginPage> {
 
                 const SizedBox(height: 32),
 
-                // STEP 2: Get the authorization code from URL
+                // Get the authorization code from URL
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
@@ -348,7 +348,11 @@ class _LoginPageState extends State<LoginPage> {
                             const SizedBox(height: 12),
                             Row(
                               children: [
-                                Icon(Icons.info_outline, size: 16, color: Colors.grey[400]),
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Colors.grey[400],
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
@@ -366,13 +370,16 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 20),
                       TextButton(
-                        onPressed: () =>
-                            setState(() => _showManualEntry = !_showManualEntry),
+                        onPressed: () => setState(
+                          () => _showManualEntry = !_showManualEntry,
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _showManualEntry ? Icons.expand_less : Icons.expand_more,
+                              _showManualEntry
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
@@ -394,7 +401,9 @@ class _LoginPageState extends State<LoginPage> {
                         TextField(
                           controller: _codeController,
                           decoration: InputDecoration(
-                            labelText: AppLocalizations.of(context)!.authorizationCode,
+                            labelText: AppLocalizations.of(
+                              context,
+                            )!.authorizationCode,
                             hintText: 'Paste the code from the URL here',
                             border: const OutlineInputBorder(),
                             prefixIcon: const Icon(Icons.vpn_key),
@@ -423,10 +432,9 @@ class _LoginPageState extends State<LoginPage> {
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 24),
 
-                // Optional: Check Status
+                // Check Status
                 SizedBox(
                   height: 48,
                   child: OutlinedButton(
