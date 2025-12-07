@@ -59,6 +59,7 @@ Music Vibe integrates multiple Spotify endpoints:
 * url_launcher
 * flutter_svg
 
+### **IMPORTANT: Your Spotify email associated with your account needs to be registered with out Spotify API**
 
 **Developed by Jessica Baek and Danielle Paton**   
 **University of Pittsburgh — CS 1635**    
