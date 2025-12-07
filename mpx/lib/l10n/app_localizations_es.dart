@@ -9,7 +9,7 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
-  String get title => 'RASTREADOR DE ESTADO DE ÁNIMO';
+  String get title => 'AMBIENTE MUSICAL';
 
   @override
   String get subtitle => 'MP-X';

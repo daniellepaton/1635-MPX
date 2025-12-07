@@ -13,7 +13,7 @@ void main() {
 
   setUp(() {
     mockAuthService = MockAuthService();
-    viewModel = AuthViewModel.test(mockAuthService); // <-- SEE STEP 3
+    viewModel = AuthViewModel.test(mockAuthService);
   });
 
   test('Initial state should NOT be authenticated', () {
