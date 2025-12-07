@@ -3,7 +3,7 @@ import '../services/auth_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
   final AuthService _auth;
-  
+
   AuthViewModel() : _auth = AuthService();
   AuthViewModel.test(this._auth);
 
@@ -37,7 +37,7 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  /// Optional: fetch the user's Spotify profile
+  /// fetch the user's Spotify profile
   Future<Map<String, dynamic>?> getUserInfo() async {
     return await _auth.getUserInfo();
   }
